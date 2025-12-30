@@ -1,10 +1,9 @@
-import { DayPicker } from "react-day-picker";
+import { DayPicker } from 'react-day-picker';
 
 import { useState, useEffect, useRef } from 'react';
 
 export default function DatePicker() {
-
-  const [date, setDate] = useState<Date | null>(null);
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [pickerActive, setPickerActive] = useState<boolean>(false);
 
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -15,12 +14,13 @@ export default function DatePicker() {
     if (!pickerActive && readyToReturnFocus.current) {
       buttonRef.current?.focus();
       readyToReturnFocus.current = false;
-    }
-    else if (pickerActive) {
+    } else if (pickerActive) {
       readyToReturnFocus.current = true;
 
       requestAnimationFrame(() => {
-        const currentDayButton = pickerRef.current?.querySelector<HTMLButtonElement>('td[data-today="true"] > button.rdp-day-button');
+        const currentDayButton = pickerRef.current?.querySelector<HTMLButtonElement>(
+          'td[data-today="true"] > button.rdp-day-button',
+        );
         currentDayButton?.focus();
       });
     }
@@ -43,12 +43,18 @@ export default function DatePicker() {
   }
 
   return (
-    pickerActive ?
-      (
+    <>
+      <input
+        type="hidden"
+        name="dueDate"
+        value={date ? date.toISOString().split('T')[0] : ''}
+      />
+      {pickerActive ? (
         <div
           className="details-body"
           onKeyDown={handleKeyPress}
-          ref={pickerRef}>
+          ref={pickerRef}
+        >
           <DayPicker
             mode="single"
             selected={date}
@@ -57,9 +63,14 @@ export default function DatePicker() {
           />
         </div>
       ) : (
-        <button type="button" ref={buttonRef} onClick={() => setPickerActive(true)}>
-          {date ? date.toDateString() : "Select Date"}
+        <button
+          type="button"
+          ref={buttonRef}
+          onClick={() => setPickerActive(true)}
+        >
+          {date ? date.toDateString() : 'Select Date'}
         </button>
-      )
+      )}
+    </>
   );
 }

@@ -1,8 +1,8 @@
 import { Temporal } from 'temporal-polyfill';
-import { BaseNode } from '../node/BaseNode.ts';
-import { TextareaAutosize } from "@mui/base";
+import { BaseNode } from 'nested-core';
 
 type TaskArgs = {
+  title: string;
   done?: boolean;
   dueDate?: Temporal.PlainDate;
   tags?: string[];
@@ -11,8 +11,11 @@ type TaskArgs = {
 
 export class Task extends BaseNode {
   done: boolean;
+
   dueDate: Temporal.PlainDate | null;
+
   instructions: string | null;
+
   tags: string[] | null;
 
   static readonly nodeTypeName = 'task';
@@ -28,4 +31,8 @@ export class Task extends BaseNode {
   toggleStatus(): void {
     this.done = !this.done;
   }
+}
+
+export function isTask(node: BaseNode): node is Task {
+  return node.type === Task.nodeTypeName;
 }
