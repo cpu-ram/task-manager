@@ -16,7 +16,7 @@
     "@mui/material": "5.15.20",
     "dotenv": "^17.2.3",
     "immer": "^10.2.0",
-    "nested-core": "file:../../nested-core",
+    "nested-core": "github:cpu-ram/nested-core#dev",
     "react": "18.2.0",
     "react-day-picker": "^9.13.0",
     "react-dom": "18.2.0",
