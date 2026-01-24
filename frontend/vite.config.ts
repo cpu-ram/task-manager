@@ -5,11 +5,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 const allowedHostsArray = process.env.ALLOWED_HOSTS?.split(',') ?? [];
 
+const baseLaunchDirectory = process.env.BASE_LAUNCH_DIRECTORY ?? '';
+
 export default defineConfig({
+  base: `${baseLaunchDirectory}`,
   plugins: [react()],
-  dev: {
-    sourcemap: true,
-  },
   build: {
     sourcemap: true,
   },
