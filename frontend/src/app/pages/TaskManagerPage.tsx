@@ -1,4 +1,6 @@
 import './taskManagerStyles.css';
+
+import { useRef } from 'react';
 import {
   FilterCriterionConfig,
   FilterCriteriaState,
@@ -8,12 +10,14 @@ import {
 } from 'nested-core';
 import { Task } from '../models/task/Task.ts';
 import Domain from '../models/domain/Domain.ts';
-import { exportData } from '../data/getData.ts';
+import { downloadExportData } from '../data/downloadExportData'
 import nodeSort from '../nodeSort.ts';
 import { renderTitle } from '../components/NodeTitle/NodeTitle.tsx';
 import renderEntryForm from '../renderEntryForm.tsx';
 
 import { useTaskManagerState } from '../useTaskManagerState.ts';
+
+import { parseData } from '../data/parseData.ts';
 
 function TaskManagerPage() {
   const {
@@ -22,18 +26,8 @@ function TaskManagerPage() {
     addChildNode,
     deleteNode,
     toggleArchiveDomain,
+    replaceTree,
   } = useTaskManagerState();
-
-  function downloadData(): void {
-    const dataStr: string = exportData();
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'taskData.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
 
   const initialFilterCriteria: FilterCriterionConfig[] = [
     {
@@ -175,16 +169,66 @@ function TaskManagerPage() {
       execute: ({ callerId }: { callerId: string }) => deleteNode({ nodeId: callerId }),
     },
 
-    downloadData: {
+    downloadExportData: {
       type: 'global',
 
       label: 'Export Data',
 
-      execute: () => downloadData(),
+      execute: () => downloadExportData(),
     },
+
+    uploadImportData: {
+      type: 'global',
+
+      label: 'Import Data',
+
+      ownRenderer: () => {
+        const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+        function openFilePicker() {
+          fileInputRef.current?.click();
+        }
+
+        async function handleFileChange(
+          e: React.ChangeEvent<HTMLInputElement>,
+        ) {
+          const file = e.target.files?.[0];
+          if (!file) return;
+
+          const fileText = await file.text();
+
+          let newTree: BaseNode;
+          try {
+            newTree = parseData(fileText);
+          }
+          catch (error) {
+            console.log('Failed to parse imported data: ' + (error as Error).message);
+            return;
+          }
+
+          replaceTree({ newTree: newTree });
+        }
+
+        return (
+          <>
+            <button type="button" onClick={openFilePicker}>
+              Import Data
+            </button >
+
+            <input
+              type="file"
+              accept=".json"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+          </>
+        );
+      }
+    }
   };
 
-  const headerActions: string[] = ['downloadData'];
+  const headerActions: string[] = ['downloadExportData', 'uploadImportData'];
 
   const getNodeActionsList = (node: BaseNode) => {
     switch (node.type) {

@@ -16,7 +16,14 @@ type ToggleArchiveDomainAction = {
   };
 };
 
-type TaskManagerAction = ToggleDoneAction | ToggleArchiveDomainAction;
+type ReplaceTreeAction = {
+  type: 'REPLACE_TREE';
+  payload: {
+    newTree: BaseNode;
+  };
+}
+
+type TaskManagerAction = ToggleDoneAction | ToggleArchiveDomainAction | ReplaceTreeAction;
 
 const taskManagerReducer: TreeReducer<TaskManagerAction> = (
   draft: BaseNode,
@@ -52,6 +59,22 @@ const taskManagerReducer: TreeReducer<TaskManagerAction> = (
         return true;
       }
       break;
+
+    case 'REPLACE_TREE':
+      {
+        const { newTree } = action.payload;
+        if (!newTree) {
+          throw new Error('Invalid payload for REPLACE_TREE action');
+        }
+
+        for (const key of Object.keys(draft)) {
+          delete (draft as any)[key];
+        }
+
+        Object.assign(draft, newTree);
+
+        return true;
+      }
 
     default:
       return false;

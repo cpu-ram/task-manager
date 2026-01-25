@@ -37,5 +37,12 @@ export function useTaskManagerState() {
         payload: { nodeId },
       });
     },
+
+    replaceTree: ({ newTree }: { newTree: BaseNode }) => {
+      core.dispatch({
+        type: 'REPLACE_TREE',
+        payload: { newTree },
+      });
+    },
   };
 }
