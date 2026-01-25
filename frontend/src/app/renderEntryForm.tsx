@@ -64,12 +64,8 @@ function transformFormData({
   return Object.fromEntries(transformedData);
 }
 
-function createNodeSubmitHandler({
-  parentId,
-  nodeType,
-  onMenuClose,
-  addChildNode,
-}: {
+type NodeCreationSubmitHandlerParams = {
+  mode: 'create';
   parentId: string;
   nodeType: NodeType;
   onMenuClose?: () => void;
@@ -80,36 +76,84 @@ function createNodeSubmitHandler({
     parentId: string;
     childNode: BaseNode;
   }) => void;
-}) {
+};
+
+type NodeEditSubmitHandlerParams = {
+  mode: 'edit';
+  targetNodeId: string;
+  nodeType: NodeType;
+  onMenuClose?: () => void;
+  updateNode: ({
+    nodeId,
+    newNode,
+  }: {
+    nodeId: string;
+    newNode: BaseNode;
+  }) => void;
+};
+
+type SubmitHandlerParams =
+  | NodeCreationSubmitHandlerParams
+  | NodeEditSubmitHandlerParams;
+
+function createNodeSubmitHandler(args: SubmitHandlerParams) {
   return ({ e }: { e: React.FormEvent<HTMLFormElement> }) => {
-    const nodeData = interceptFormData(e);
+    if (args.mode === 'create') {
+      const {
+        parentId, nodeType, onMenuClose, addChildNode,
+      } = args;
 
-    const transformConfig: {
-      [key: string]: (arg: string) => any;
-    } = {
-      dueDate: convertDateStringToTemporalPlainDate,
-    };
-    const transformedNodeData = transformFormData({
-      formData: nodeData,
-      transformConfig,
-    });
+      const nodeData = interceptFormData(e);
 
-    const newChildNode = createNode({
-      nodeData: transformedNodeData,
-      nodeType,
-    });
-    addChildNode({ parentId, childNode: newChildNode });
-    onMenuClose && onMenuClose();
+      const transformConfig: {
+        [key: string]: (arg: string) => any;
+      } = {
+        dueDate: convertDateStringToTemporalPlainDate,
+      };
+      const transformedNodeData = transformFormData({
+        formData: nodeData,
+        transformConfig,
+      });
+
+      const newChildNode = createNode({
+        nodeData: transformedNodeData,
+        nodeType,
+      });
+      addChildNode({ parentId, childNode: newChildNode });
+      onMenuClose && onMenuClose();
+    }
+
+    else if (args.mode === 'edit') {
+      const {
+        targetNodeId, nodeType, onMenuClose, updateNode,
+      } = args;
+
+      const nodeData = interceptFormData(e);
+
+      const transformConfig: {
+        [key: string]: (arg: string) => any;
+      } = {
+        dueDate: convertDateStringToTemporalPlainDate,
+      };
+      const transformedNodeData = transformFormData({
+        formData: nodeData,
+        transformConfig,
+      });
+
+      const newChildNode = createNode({
+        nodeData: transformedNodeData,
+        nodeType,
+      });
+
+      updateNode({ nodeId: targetNodeId, newNode: newChildNode });
+      onMenuClose && onMenuClose();
+    }
   };
 }
 
-function renderEntryForm({
-  type,
-  onMenuClose,
-  parentId,
-  addChildNode,
-}: {
-  type: string;
+type CreateEntryFormParams = {
+  nodeType: string;
+  formType: 'create';
   onMenuClose?: () => void;
   parentId: string;
   addChildNode: ({
@@ -119,13 +163,52 @@ function renderEntryForm({
     parentId: string;
     childNode: BaseNode;
   }) => void;
-}) {
-  switch (type) {
+};
+
+type EditEntryFormParams = {
+  nodeType: string;
+  formType: 'edit';
+  onMenuClose?: () => void;
+  targetNodeId: string;
+  updateNode: ({
+    nodeId,
+    newNode,
+  }: {
+    nodeId: string;
+    newNode: BaseNode;
+  }) => void;
+  initialState: {
+    title: string;
+    dueDate?: Temporal.PlainDate;
+    instructions?: string;
+  }
+};
+
+type EntryFormParams = CreateEntryFormParams | EditEntryFormParams;
+
+function renderEntryForm(args: EntryFormParams) {
+  const { formType } = args;
+
+  if (formType === 'create') {
+    return renderCreateForm(args);
+  } if (formType === 'edit') {
+    return renderEditForm(args);
+  }
+  return null;
+}
+
+function renderCreateForm(args: CreateEntryFormParams) {
+  const {
+    nodeType, onMenuClose, parentId, addChildNode,
+  } = args;
+
+  switch (nodeType) {
     case 'task':
       return (
         <TaskForm
           onMenuClose={onMenuClose}
           onSubmit={createNodeSubmitHandler({
+            mode: 'create',
             parentId,
             nodeType: 'task',
             addChildNode,
@@ -140,11 +223,55 @@ function renderEntryForm({
         <DomainForm
           onMenuClose={onMenuClose}
           onSubmit={createNodeSubmitHandler({
+            mode: 'create',
             parentId,
             nodeType: 'domain',
             addChildNode,
             onMenuClose,
           })}
+        />
+      );
+      break;
+
+    default:
+      return null;
+  }
+}
+
+function renderEditForm(args: EditEntryFormParams) {
+  const {
+    nodeType, onMenuClose, targetNodeId, updateNode, initialState
+  } = args;
+
+  switch (nodeType) {
+    case 'domain':
+      return (
+        <DomainForm
+          onMenuClose={onMenuClose}
+          onSubmit={createNodeSubmitHandler({
+            mode: 'edit',
+            targetNodeId,
+            nodeType: 'domain',
+            updateNode,
+            onMenuClose,
+          })}
+          initialState={initialState}
+        />
+      );
+      break;
+
+    case 'task':
+      return (
+        <TaskForm
+          onMenuClose={onMenuClose}
+          onSubmit={createNodeSubmitHandler({
+            mode: 'edit',
+            targetNodeId,
+            nodeType: 'task',
+            updateNode,
+            onMenuClose,
+          })}
+          initialState={initialState}
         />
       );
       break;
