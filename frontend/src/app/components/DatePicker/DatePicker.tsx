@@ -1,9 +1,14 @@
 import { DayPicker } from 'react-day-picker';
+import { Temporal } from 'temporal-polyfill';
 
 import { useState, useEffect, useRef } from 'react';
 
-export default function DatePicker() {
-  const [date, setDate] = useState<Date | undefined>(undefined);
+export default function DatePicker({
+  defaultValue,
+}: {
+  defaultValue?: Temporal.PlainDate;
+}) {
+  const [date, setDate] = useState<Date | undefined>(initializeDate());
   const [pickerActive, setPickerActive] = useState<boolean>(false);
 
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -25,6 +30,21 @@ export default function DatePicker() {
       });
     }
   }, [pickerActive]);
+
+  function initializeDate(): Date | undefined {
+    if (defaultValue) {
+      let temporalInstant = defaultValue
+        .toZonedDateTime({
+          timeZone: "UTC",
+          plainTime: Temporal.PlainTime.from("00:00"),
+        })
+        .toInstant();
+      let result = new Date(temporalInstant.epochMilliseconds);
+
+      return result;
+    }
+    else return undefined;
+  }
 
   function handleDateSelection(selectedDate: Date | undefined) {
     if (!selectedDate) return;
