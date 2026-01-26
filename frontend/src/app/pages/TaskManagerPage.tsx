@@ -7,10 +7,11 @@ import {
   BaseNode,
   TreeUI,
   Action,
+  findNode,
 } from 'nested-core';
-import { Task } from '../models/task/Task.ts';
-import Domain from '../models/domain/Domain.ts';
-import { downloadExportData } from '../data/downloadExportData'
+import { Task, isTask } from '../models/task/Task.ts';
+import Domain, { isDomain } from '../models/domain/Domain.ts';
+import { downloadExportData } from '../data/downloadExportData';
 import nodeSort from '../nodeSort.ts';
 import { renderTitle } from '../components/NodeTitle/NodeTitle.tsx';
 import renderEntryForm from '../renderEntryForm.tsx';
@@ -27,6 +28,7 @@ function TaskManagerPage() {
     deleteNode,
     toggleArchiveDomain,
     replaceTree,
+    updateNode,
   } = useTaskManagerState();
 
   const initialFilterCriteria: FilterCriterionConfig[] = [
@@ -119,7 +121,8 @@ function TaskManagerPage() {
         hidePopup?: () => void;
         callerId: string;
       }) => renderEntryForm({
-        type: 'task',
+        nodeType: 'task',
+        formType: 'create',
         onMenuClose: hidePopup,
         parentId: callerId,
         addChildNode,
@@ -138,7 +141,8 @@ function TaskManagerPage() {
         hidePopup?: () => void;
         callerId: string;
       }) => renderEntryForm({
-        type: 'domain',
+        nodeType: 'domain',
+        formType: 'create',
         onMenuClose: hidePopup,
         parentId: callerId,
         addChildNode,
@@ -200,20 +204,21 @@ function TaskManagerPage() {
           let newTree: BaseNode;
           try {
             newTree = parseData(fileText);
-          }
-          catch (error) {
-            console.log('Failed to parse imported data: ' + (error as Error).message);
+          } catch (error) {
+            console.log(
+              `Failed to parse imported data: ${(error as Error).message}`,
+            );
             return;
           }
 
-          replaceTree({ newTree: newTree });
+          replaceTree({ newTree });
         }
 
         return (
           <>
             <button type="button" onClick={openFilePicker}>
               Import Data
-            </button >
+            </button>
 
             <input
               type="file"
@@ -224,8 +229,70 @@ function TaskManagerPage() {
             />
           </>
         );
-      }
-    }
+      },
+    },
+
+    editDomain: {
+      type: 'node',
+
+      label: 'Edit',
+
+      renderer: ({
+        hidePopup,
+        callerId,
+      }: {
+        hidePopup?: () => void;
+        callerId: string;
+      }) => {
+        const currentNode = findNode({ root: dataTree, nodeId: callerId });
+        if (!currentNode || !isDomain(currentNode)) {
+          return null;
+        }
+
+        return renderEntryForm({
+          nodeType: 'domain',
+          formType: 'edit',
+          targetNodeId: callerId,
+          onMenuClose: hidePopup,
+          updateNode,
+          initialState: {
+            title: currentNode.title,
+          },
+        });
+      },
+    },
+
+    editTask: {
+      type: 'node',
+
+      label: 'Edit',
+
+      renderer: ({
+        hidePopup,
+        callerId,
+      }: {
+        hidePopup?: () => void;
+        callerId: string;
+      }) => {
+        const currentNode = findNode({ root: dataTree, nodeId: callerId });
+        if (!currentNode || !isTask(currentNode)) {
+          return null;
+        }
+
+        return renderEntryForm({
+          nodeType: 'task',
+          formType: 'edit',
+          targetNodeId: callerId,
+          onMenuClose: hidePopup,
+          updateNode,
+          initialState: {
+            title: currentNode.title ?? undefined,
+            dueDate: currentNode.dueDate ?? undefined,
+            instructions: currentNode.instructions ?? undefined,
+          },
+        });
+      },
+    },
   };
 
   const headerActions: string[] = ['downloadExportData', 'uploadImportData'];
@@ -233,12 +300,13 @@ function TaskManagerPage() {
   const getNodeActionsList = (node: BaseNode) => {
     switch (node.type) {
       case 'task': {
-        return ['createNewChildTask', 'deleteTask'];
+        return ['createNewChildTask', 'editTask', 'deleteTask'];
       }
       case 'domain': {
         const domainActionsList = [
           'createNewChildTask',
           'createNewChildDomain',
+          'editDomain',
         ];
 
         if (node instanceof Domain && node.archived) {
